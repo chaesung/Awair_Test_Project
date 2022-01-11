@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Awair Test Project</string>
+    <string name="start_time">Start Time</string>
+    <string name="end_time">End Time</string>
+    <string name="no_title">No Title</string>
+    <string name="retry">Retry</string>
+    <string name="no_more_events">No more events</string>
+    <string name="event_list_update_failed">Event list update failed</string>
+    <string name="event_list_is_updated">Event list is updated</string>
+    <string name="event_list_update_retry">Would you like to try again?</string>
+</resources>
