@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.awair.testproject.event.list.data.entity.Event
+import com.awair.testproject.event.list.data.entity.EventList
 import com.awair.testproject.event.list.repository.EventListRepository
 import com.awair.testproject.getDateFromFormat
 import com.awair.testproject.network.NetworkResult
@@ -18,7 +19,8 @@ import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
-class EventListViewModel @Inject constructor(private val mainRepository: EventListRepository) : ViewModel() {
+class EventListViewModel @Inject constructor(private val mainRepository: EventListRepository) :
+    ViewModel() {
     private val _networkResponse: MutableLiveData<NetworkResult<*>> =
         MutableLiveData<NetworkResult<*>>()
     val networkResponse: LiveData<NetworkResult<*>> = _networkResponse
@@ -33,14 +35,8 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
      */
     fun getEventList() {
         viewModelScope.launch {
-            mainRepository.getEvents().collect {
-                it.data?.run {
-                    this@EventListViewModel.nextPageToken = nextPageToken
-                    eventList.addAll(events)
-                    sortEventsByStartEndDate()
-                }
-                _networkResponse.value = it
-            }
+            mainRepository.getEvents()
+                .collect(::handleGetEventResponse)
         }
     }
 
@@ -50,18 +46,27 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
     fun getNextEventList() {
         viewModelScope.launch {
             if (nextPageToken.isNotEmpty()) {
-                mainRepository.getNextEvents(nextPageToken).collect {
-                    it.data?.run {
-                        this@EventListViewModel.nextPageToken = nextPageToken
-                        eventList.addAll(events)
-                        sortEventsByStartEndDate()
-                    }
-                    _networkResponse.value = it
-                }
+                mainRepository.getNextEvents(nextPageToken)
+                    .collect(::handleGetEventResponse)
             } else {
                 _toastMessage.value = SHOW_TOAST_NO_MORE_EVENT
             }
         }
+    }
+
+    /**
+     * Handle get event list api response
+     * It updates next page token and adds new event items to list.
+     * Finally calls sort function to sort the list and apply conflict flags
+     * The run time complexity here would be n if api is successful other wise it would 1
+     */
+    private fun handleGetEventResponse(eventResponse: NetworkResult<EventList>) {
+        eventResponse.data?.run {
+            this@EventListViewModel.nextPageToken = nextPageToken
+            eventList.addAll(events)
+            sortEventsByStartEndDate()
+        }
+        _networkResponse.value = eventResponse
     }
 
     /**
@@ -78,24 +83,34 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
     /**
      * Sorts event list by start and end date
      * Then checks the event list items for conflicts and recreates list with flag as pair
+     * Because of the sorting logic the time complexity would be n log n
      */
     @SuppressLint("SimpleDateFormat")
     private fun sortEventsByStartEndDate() {
         eventList.sortBy { it.end.getDateFromFormat(DATE_FORMAT_STRING) }
         eventList.sortBy { it.start.getDateFromFormat(DATE_FORMAT_STRING) }
         eventListWithConflictFlag.clear()
-        for(i in 0 until eventList.size - 1) {
-            if(isOverlapping(eventList[i].start, eventList[i].end,
-                    eventList[i+1].start, eventList[i+1].end)) {
-                if(eventListWithConflictFlag.isNotEmpty())
+        /**
+         * After sorting is done it loops around sorted list
+         * and creates new list with conflict flag included for every item
+         * Since it's already sorted by start time and end time,
+         * only comparison with next item is necessary to determine the conflict
+         */
+        for (i in 0 until eventList.size - 1) {
+            if (isOverlapping(
+                    eventList[i].start, eventList[i].end,
+                    eventList[i + 1].start, eventList[i + 1].end
+                )
+            ) {
+                if (eventListWithConflictFlag.isNotEmpty())
                     eventListWithConflictFlag[i] = eventList[i] to true
                 else
                     eventListWithConflictFlag.add(eventList[i] to true)
-                eventListWithConflictFlag.add(eventList[i+1] to true)
+                eventListWithConflictFlag.add(eventList[i + 1] to true)
             } else {
-                if(eventListWithConflictFlag.isEmpty())
+                if (eventListWithConflictFlag.isEmpty())
                     eventListWithConflictFlag.add(eventList[i] to false)
-                eventListWithConflictFlag.add(eventList[i+1] to false)
+                eventListWithConflictFlag.add(eventList[i + 1] to false)
             }
         }
     }

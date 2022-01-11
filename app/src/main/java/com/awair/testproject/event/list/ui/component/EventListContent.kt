@@ -59,7 +59,6 @@ fun LazyListState.OnBottomReached(
         derivedStateOf {
             val lastVisibleItem =
                 layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            Log.e("TEST", "showmore value: ${lastVisibleItem.index} ${buffer}")
             lastVisibleItem.index >= layoutInfo.totalItemsCount - 1 - buffer
         }
     }
