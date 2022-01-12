@@ -2,6 +2,7 @@ package com.awair.testproject.event.list.ui
 
 import android.annotation.SuppressLint
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import com.awair.testproject.event.list.data.entity.Event
 import com.awair.testproject.event.list.data.entity.EventList
 import com.awair.testproject.event.list.repository.EventListRepository
 import com.awair.testproject.getDateFromFormat
+import com.awair.testproject.getNewDateWithDiffFormat
 import com.awair.testproject.network.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
@@ -27,7 +29,7 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
     private val _toastMessage: MutableLiveData<Int> = MutableLiveData<Int>()
     val toastMessage: LiveData<Int> = _toastMessage
     private val eventList by lazy { arrayListOf<Event>() }
-    val eventListWithConflictFlag by lazy { mutableStateListOf<Pair<Event, Boolean>>() }
+    val eventMapListWithConflictFlag by lazy { mutableStateMapOf<Long, List<Pair<Event, Boolean>>>() }
     private var nextPageToken = ""
 
     /**
@@ -89,12 +91,14 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
     private fun sortEventsByStartEndDate() {
         eventList.sortBy { it.end.getDateFromFormat(DATE_FORMAT_STRING) }
         eventList.sortBy { it.start.getDateFromFormat(DATE_FORMAT_STRING) }
-        eventListWithConflictFlag.clear()
+        val eventListWithConflictFlag = ArrayList<Pair<Event, Boolean>>()
+
         /**
          * After sorting is done it loops around sorted list
          * and creates new list with conflict flag included for every item
          * Since it's already sorted by start time and end time,
          * only comparison with next item is necessary to determine the conflict
+         * Finally it will group the items by date and output as map by date
          */
         for (i in 0 until eventList.size - 1) {
             if (isOverlapping(
@@ -112,22 +116,29 @@ class EventListViewModel @Inject constructor(private val mainRepository: EventLi
                     eventListWithConflictFlag.add(eventList[i] to false)
                 eventListWithConflictFlag.add(eventList[i + 1] to false)
             }
+            eventMapListWithConflictFlag.clear()
+            eventMapListWithConflictFlag.putAll(eventListWithConflictFlag.groupBy {
+                it.first.start.getDateFromFormat(DATE_FORMAT_STRING)
+                    ?.getNewDateWithDiffFormat(DATE_FORMAT_STRING_SECTION)?.time?: Date().time
+            })
         }
     }
 
     /**
      * Utility method to check for date overlapping
+     * If parse error occurs formatter will return null and it will set current date as default value
      */
     private fun isOverlapping(start1: String, end1: String, start2: String, end2: String): Boolean {
-        val start1Date = start1.getDateFromFormat(DATE_FORMAT_STRING)
-        val end1Date = end1.getDateFromFormat(DATE_FORMAT_STRING)
-        val start2Date = start2.getDateFromFormat(DATE_FORMAT_STRING)
-        val end2Date = end2.getDateFromFormat(DATE_FORMAT_STRING)
+        val start1Date = start1.getDateFromFormat(DATE_FORMAT_STRING)?: Date()
+        val end1Date = end1.getDateFromFormat(DATE_FORMAT_STRING)?: Date()
+        val start2Date = start2.getDateFromFormat(DATE_FORMAT_STRING)?: Date()
+        val end2Date = end2.getDateFromFormat(DATE_FORMAT_STRING)?: Date()
         return start1Date.before(end2Date) && start2Date.before(end1Date)
     }
 
     companion object {
         const val SHOW_TOAST_NO_MORE_EVENT = 1000
-        const val DATE_FORMAT_STRING = "MMMMM dd, yyyy h:mm aaa"
+        const val DATE_FORMAT_STRING = "MMMMM d, yyyy h:mm aaa"
+        const val DATE_FORMAT_STRING_SECTION = "MMMM d, yyyy"
     }
 }

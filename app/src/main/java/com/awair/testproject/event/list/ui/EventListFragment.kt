@@ -43,7 +43,7 @@ class EventListFragment : Fragment() {
             setContent {
                 EventListContent(
                     context = requireContext(),
-                    eventStateList = viewModel.eventListWithConflictFlag,
+                    eventStateListMap = viewModel.eventMapListWithConflictFlag,
                     isLoading = isLoading,
                     bottomReachedCallback = ::listBottomReached,
                     cardItemClick = ::listItemClicked

@@ -19,6 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.awair.testproject.R
 import com.awair.testproject.event.list.data.entity.Event
 
+/**
+ * Event list item compose view
+ * Displays title, start time, end time
+ * If title is empty it will display as No Title
+ */
 @ExperimentalMaterialApi
 @Composable
 fun EventListItem(
