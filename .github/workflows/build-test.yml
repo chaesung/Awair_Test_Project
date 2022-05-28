@@ -6,7 +6,7 @@ on:
       - "test-*"
 
 jobs:
-  apk:
+  build_release:
     name: Android Generate APK Test
     runs-on: ubuntu-latest
     env:
@@ -32,31 +32,31 @@ jobs:
         with:
           name: apk
           path: app/build/outputs/apk/debug/*.apk
-
-  release:
-    name: Release APK
-    needs: apk
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download APK from build
-        uses: actions/download-artifact@v3
-        with:
-          name: apk
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.MOBILE_ANDROID_SMARTHQ_TOKEN }}
         with:
-          tag_name: ${{ github.run_number }}
-          release_name: ${{ github.event.repository.name }} v${{ github.run_number }}
-      - name: Upload Release APK
-        id: upload_release_asset
-        uses: actions/upload-release-asset@v1.0.1
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Save name of our Artifact
+        id: set-result-artifact
+        run: |
+          ARTIFACT_PATHNAME_APK=$(ls app/build/outputs/apk/release/*.apk | head -n 1)
+          ARTIFACT_NAME_APK=$(basename $ARTIFACT_PATHNAME_APK)
+          echo "ARTIFACT_NAME_APK is " ${ARTIFACT_NAME_APK}
+          echo "ARTIFACT_PATHNAME_APK=${ARTIFACT_PATHNAME_APK}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_APK=${ARTIFACT_NAME_APK}" >> $GITHUB_ENV
+      - name: Upload our Artifact Assets
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.MOBILE_ANDROID_SMARTHQ_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: apk/app-debug.apk
-          asset_name: ${{ github.event.repository.name }}.apk
+          asset_path: ${{ env.ARTIFACT_PATHNAME_APK }}
+          asset_name: ${{ env.ARTIFACT_NAME_APK }}
           asset_content_type: application/zip
