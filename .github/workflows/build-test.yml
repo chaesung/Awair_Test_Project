@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2.4.0
-      - name: Checkout submodules
-        uses: geappliances/mobile.connected.smarthq.flutter@develop_build_test
-      - name: Checkout submodules
-        uses: geappliances/mobile.connected.commonframework.android@develop
+#      - name: Checkout submodules
+#        uses: geappliances/mobile.connected.smarthq.flutter@develop_build_test
+#      - name: Checkout submodules
+#        uses: geappliances/mobile.connected.commonframework.android@develop
       - name: Setup JDK
         uses: actions/setup-java@v2.5.0
         with:
@@ -24,7 +24,7 @@ jobs:
       - name: Set execution flag for gradlew
         run: chmod +x gradlew
       - name: Build APK
-        run: bash ./gradlew assembleFieldNoDexDebug --stacktrace
+        run: bash ./gradlew assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v3
         with:
